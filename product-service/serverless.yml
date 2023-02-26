@@ -1,32 +1,44 @@
 service: product-service
-frameworkVersion: '2'
-variablesResolutionMode: 20210219
+frameworkVersion: '3'
 
 provider:
   name: aws
   runtime: nodejs12.x
   stage: ${opt:stage, 'dev'}
-  region: us-east-1
+  region: eu-west-3
+  iam:
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Scan
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-products-${sls:stage}
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-stocks-${sls:stage}
   environment:
-    ENV_STAGE: ${opt:stage, 'dev'}
-    PGHOST: ${self:custom.dotenvVars.PGHOST, env:PGHOST, ''}
-    PGUSER: ${self:custom.dotenvVars.PGUSER, env:PGUSER, ''}
-    PGDATABASE: ${self:custom.dotenvVars.PGDATABASE, env:PGDATABASE, ''}
-    PGPASSWORD: ${self:custom.dotenvVars.PGPASSWORD, env:PGPASSWORD, ''}
-    PGPORT: ${self:custom.dotenvVars.PGPORT, env:PGPORT, ''}
+    DYNAMODB_PRODUCTS_TABLE: ${self:service}-products-${sls:stage}
+    DYNAMODB_STOCKS_TABLE: ${self:service}-stocks-${sls:stage}
 
 plugins:
   - serverless-webpack
+  - serverless-offline
 
 custom:
   webpack:
     webpackConfig: 'webpack.config.js'
     includeModules: true
     dotenvVars: ${file(configs.js)}
+  autoswagger:
+    typefiles: ['./src/services/productDTO.ts']
 
 functions:
   getProductById:
-    handler: handler.getProductById
+    handler: src/index.getProductByIdHandler
     events:
       - http:
           path: products/{productId}
@@ -37,19 +49,54 @@ functions:
               paths:
                 productId: true
   getAllProducts:
-    handler: handler.getAllProducts
+    handler: src/index.getAllProductsHandler
     events:
       - http:
           path: products
           method: get
           cors: true
+  mockProducts:
+    handler: src/index.mockProductsHandler
+    events:
+      - http:
+          path: products/mock
+          method: get
+          cors: true
   createProduct:
-    handler: handler.createProduct
+    handler: src/index.createProductHandler
     events:
       - http:
           path: products
           method: post
           cors: true
           request:
-              schema:
-                application/json: ${file(src/schemas/createProductSchema.json)}
+            schema:
+              application/json: ${file(src/schemas/createProductSchema.json)}
+resources:
+  Resources:
+    Products:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-products-${sls:stage}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+    Stocks:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-stocks-${sls:stage}
+        AttributeDefinitions:
+          - AttributeName: product_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: product_id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5

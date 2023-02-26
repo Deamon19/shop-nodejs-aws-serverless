@@ -1,30 +1,59 @@
-import csv from 'csv-parser';
-const BUCKET = process.env.BUCKET;
+const AWS = require('aws-sdk');
+const csv = require('csv-parser');
+const removeBOM = require('remove-bom-stream')
+const s3 = new AWS.S3({ region: 'eu-west-3' })
 
-export const importFileParser = ({
-    s3,
-    logger,
-}) => async (event) => {
-    event.Records.forEach(record => {        
-        const s3Stream = s3.getObject({
-            Bucket: BUCKET,
-            Key: record.s3.object.key
-        }).createReadStream();
-
-        s3Stream.pipe(csv())
-            .on('data', (data) => {
-                logger.log(data);
-            })
-            .on('end', async () => {
-                logger.log(`Copy from ${BUCKET}/${record.s3.object.key}`);
-
-                await s3.copyObject({
-                    Bucket: BUCKET,
-                    CopySource: `${BUCKET}/${record.s3.object.key}`,
-                    Key: record.s3.object.key.replace('uploaded', 'parsed')
-                }).promise();
-
-                logger.log(`Copied into ${BUCKET}/${record.s3.object.key.replace('uploaded', 'parsed')}`);
-            });
-    });
+export const importFileParser = () => async (event) => {
+    const srcBucket = event.Records[0].s3.bucket.name;
+    const srcKey = event.Records[0].s3.object.key;
+  
+    const destBucket = srcBucket;
+    const destKey = 'parsed/' + srcKey.split('/').pop();
+  
+    try {
+      // Get the object using a readable stream
+      const objectStream = s3.getObject({
+        Bucket: srcBucket,
+        Key: srcKey
+      }).createReadStream();
+  
+      // Parse the CSV data using csv-parser
+      const parsedData = [];
+  
+      await new Promise((resolve, reject) => {
+        objectStream
+          .pipe(removeBOM('utf-8'))
+          .pipe(csv())
+          .on('data', (data) => {
+            parsedData.push(data);
+          })
+          .on('end', () => {
+            console.log(`Parsed ${parsedData.length} rows from ${srcKey}`);
+            resolve(parsedData);
+          })
+          .on('error', (err) => {
+            console.error(`Error parsing ${srcKey}: ${err}`);
+            reject(err);
+          });
+      });
+  
+      // Upload the parsed data to the new location
+      await s3.upload({
+        Bucket: destBucket,
+        Key: destKey,
+        Body: JSON.stringify(parsedData),
+        ContentType: 'application/json'
+      }).promise();
+  
+      // Delete the original object from the source location
+      await s3.deleteObject({
+        Bucket: srcBucket,
+        Key: srcKey
+      }).promise();
+  
+      console.log(`Successfully moved ${srcKey} to ${destKey}`);
+    } catch (err) {
+      console.error(`Error moving ${srcKey}: ${err}`);
+      throw err;
+    }
 }

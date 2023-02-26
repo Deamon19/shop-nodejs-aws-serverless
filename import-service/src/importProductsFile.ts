@@ -19,6 +19,6 @@ export const importProductsFile = ({
     
         return successResponse(url);
     } catch (error) {
-        errorResponse(error);
+        return errorResponse(error);
     }
 }

@@ -9,7 +9,8 @@ interface ResponseInterface {
 const defaultHeaders = {
     'Access-Control-Allow-Methods': '*',
     'Access-Control-Allow-Headers': '*',
-    'Access-Control-Allow-Origin': '*'
+    'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'application/json; charset=UTF-8'
 };
 
 const errorResponse = ( err: Error, statusCode: number = 500 ): ResponseInterface => {
