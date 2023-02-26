@@ -1,8 +1,8 @@
-import { ProductServiceInterface } from "./services/products";
 import { winstonLogger } from "./utils/winstonLogger";
 import { errorResponse, successResponse } from "./utils/apiResponseBuilder";
+import * as productService from "./services/productService"
 
-export const getAllProductsHandler = (productService: ProductServiceInterface) => async (event, _context) => {
+export const getAllProductsHandler  = async (event, _context) => {
     try {
         winstonLogger.logRequest(`Incoming event: ${ JSON.stringify( event ) }`);
 

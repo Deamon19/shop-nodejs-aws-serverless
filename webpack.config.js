@@ -9,9 +9,15 @@ module.exports = {
   entry: slsw.lib.entries,
   devtool: slsw.lib.webpack.isLocal ? 'cheap-module-eval-source-map' : 'source-map',
   resolve: {
-    extensions: ['.mjs', '.json', '.ts'],
+    extensions: ['.mjs', '.json', '.ts', ],
     symlinks: false,
     cacheWithContext: false,
+    alias: {
+      '@src': path.resolve(__dirname, 'src'),
+      '@test': path.resolve(__dirname, 'test'),
+      '@swagger': path.resolve(__dirname, 'swagger'),
+    }
+
   },
   output: {
     libraryTarget: 'commonjs',
@@ -31,6 +37,7 @@ module.exports = {
             path.resolve(__dirname, 'node_modules'),
             path.resolve(__dirname, '.serverless'),
             path.resolve(__dirname, '.webpack'),
+            path.resolve(__dirname, '.swagger')
           ],
         ],
         options: {
