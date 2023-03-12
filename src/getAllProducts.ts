@@ -9,8 +9,13 @@ export const getAllProductsHandler  = async (event, _context) => {
         const products = await productService.getAllProducts();
 
         winstonLogger.logRequest(`"Received products: ${ JSON.stringify( products ) }`);
+        
 
-        return successResponse( products );
+        if( products ){
+            return successResponse( products );
+        }
+
+        return errorResponse( new Error ('Products/Stocks not found'), 404 );
     } 
     catch (err) {
         return errorResponse( err );
