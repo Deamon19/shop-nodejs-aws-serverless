@@ -1,5 +1,6 @@
 .idea
 .vscode
+.webpack
 node_modules
 */node_modules
 */.env.local

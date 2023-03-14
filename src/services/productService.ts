@@ -111,5 +111,5 @@ export const mockProducts = async () => {
       })
     );
   }
-  productsMock.forEach((product => createProduct(product)))
+  return productsMock.map((product => createProduct(product)))
 }

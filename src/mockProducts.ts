@@ -6,9 +6,9 @@ export const mockProductsHandler  = async (event, _context) => {
     try {
         winstonLogger.logRequest(`Incoming event: ${ JSON.stringify( event ) }`);
 
-        await productService.mockProducts();
+        const products = await productService.mockProducts();
 
-        return successResponse( { message: 'mock products created' }, 201 );
+        return successResponse( { message: `mock products created: ${products.length} items` }, 201 );
     } 
     catch (err) {
         return errorResponse( err );
