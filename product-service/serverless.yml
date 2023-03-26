@@ -20,9 +20,17 @@ provider:
           Resource:
             - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-products-${sls:stage}
             - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-stocks-${sls:stage}
+        - Effect: 'Allow'
+          Action: 'sqs:*'
+          Resource: { 'Fn::GetAtt': ['CatalogItemsQueue', 'Arn'] }
+        - Effect: 'Allow'
+          Action: 'sns:*'
+          Resource: !Ref 'CreateProductTopic'
+
   environment:
     DYNAMODB_PRODUCTS_TABLE: ${self:service}-products-${sls:stage}
     DYNAMODB_STOCKS_TABLE: ${self:service}-stocks-${sls:stage}
+    CREATE_PRODUCT_SNS_TOPIC_ARN: !Ref 'CreateProductTopic'
 
 plugins:
   - serverless-webpack
@@ -72,6 +80,18 @@ functions:
           request:
             schema:
               application/json: ${file(src/schemas/createProductSchema.json)}
+  catalogBatchProcess:
+    handler: src/index.catalogBatchProcess
+    events: [
+    {
+      sqs: {
+        batchSize: 5,
+        arn: {
+          'Fn::GetAtt': ['CatalogItemsQueue', 'Arn']
+        },
+      }
+    }
+  ]
 resources:
   Resources:
     Products:
@@ -100,3 +120,19 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 5
           WriteCapacityUnits: 5
+    CatalogItemsQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: 'catalog-items-queue'
+    CreateProductTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: 'create-product-topic'
+    CreateProductTopicSubscription:
+      Type: AWS::SNS::Subscription
+      Properties: 
+        Endpoint: Dmytro_Romanenko@epam.com
+        Protocol: email
+        TopicArn: !Ref 'CreateProductTopic'
+        FilterPolicy: 
+          price: [{ numeric: ['>=', 100] }]

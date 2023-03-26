@@ -2,6 +2,8 @@ import { ProductInterface } from './productsDTO'
 import { v4 as uuidv4 } from 'uuid';
 const AWS = require('aws-sdk')
 import { productsMock } from './productsList';
+import { SQSEvent } from "aws-lambda";
+import { SNS } from 'aws-sdk'
 
 export const getProductById = async (id: string): Promise<ProductInterface | undefined> => {
   const documentClient = new AWS.DynamoDB.DocumentClient()
@@ -113,4 +115,39 @@ export const mockProducts = async () => {
   }
   const res = await Promise.all(productsMock.map((async product => await createProduct(product))))
   return res
+}
+
+export const catalogBatchProcess = async (event: SQSEvent) => {
+    const sns = new SNS({ region: 'eu-west-3' })
+    const products: ProductInterface[] = JSON.parse(event.Records[0].body)
+    for (const product of products){
+      const id = uuidv4()
+      const dynamoDb = new AWS.DynamoDB.DocumentClient()
+      const productParams = {
+        TableName: process.env.DYNAMODB_PRODUCTS_TABLE,
+        Item: {
+          id: id,
+          title: product.title,
+          description: product.description,
+          price: product.price
+        }
+      }
+      const stockParams = {
+        TableName: process.env.DYNAMODB_STOCKS_TABLE,
+        Item: {
+          product_id: id,
+          count: product.count
+        }
+      }
+      await dynamoDb.put(productParams).promise()
+      await dynamoDb.put(stockParams).promise()
+    }
+
+    await sns.publish({
+        Subject: 'Product',
+        Message: 'Created',
+        TopicArn: process.env.CREATE_PRODUCT_SNS_TOPIC_ARN
+    }, () => {
+        console.log('Email sent', JSON.stringify(products))
+    }).promise()
 }

@@ -1,7 +1,8 @@
-const AWS = require('aws-sdk');
+import { S3, SQS } from 'aws-sdk'
 const csv = require('csv-parser');
 const removeBOM = require('remove-bom-stream')
-const s3 = new AWS.S3({ region: 'eu-west-3' })
+const s3 = new S3({ region: 'eu-west-3' })
+const sqs = new SQS({ region: 'eu-west-3' })
 
 export const importFileParser = () => async (event) => {
     const srcBucket = event.Records[0].s3.bucket.name;
@@ -36,24 +37,20 @@ export const importFileParser = () => async (event) => {
             reject(err);
           });
       });
-  
-      // Upload the parsed data to the new location
-      await s3.upload({
-        Bucket: destBucket,
-        Key: destKey,
-        Body: JSON.stringify(parsedData),
-        ContentType: 'application/json'
-      }).promise();
-  
-      // Delete the original object from the source location
-      await s3.deleteObject({
-        Bucket: srcBucket,
-        Key: srcKey
-      }).promise();
-  
-      console.log(`Successfully moved ${srcKey} to ${destKey}`);
+     
+      const params = {
+        MessageAttributes: {
+            Author: {
+                DataType: "String",
+                StringValue: "Dmytro",
+            }
+        },
+        QueueUrl: 'https://sqs.eu-west-3.amazonaws.com/108650243678/catalog-items-queue',
+        MessageBody: JSON.stringify(parsedData)
+      };
+      await sqs.sendMessage(params).promise()
+      return { statusCode: 200 }
     } catch (err) {
-      console.error(`Error moving ${srcKey}: ${err}`);
-      throw err;
+      return { statusCode: 500 }
     }
 }

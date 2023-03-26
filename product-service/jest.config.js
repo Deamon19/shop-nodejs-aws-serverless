@@ -13,8 +13,7 @@ module.exports = {
   ],
   moduleNameMapper: {
     '^@src/(.*)$': '<rootDir>/src/$1',
-    '^@test/(.*)$': '<rootDir>/test/$1',
-    '^axios$': require.resolve('axios')
+    '^@test/(.*)$': '<rootDir>/test/$1'
   },
   setupFilesAfterEnv: ['jest-extended', './jest.setup.ts'],
   collectCoverageFrom: [
