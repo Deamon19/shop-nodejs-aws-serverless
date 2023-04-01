@@ -1,37 +1,57 @@
 swagger: '2.0'
-info:
+info: 
   title: product-service
   version: '1'
-paths:
-  "/products/{productId}":
-    get:
+
+paths: 
+  "/products/{productId}": 
+    get: 
       summary: getProductById
       description: ''
-      operationId: getProductById.get.products/{productId}
+      operationId: getProductById.get.products/productId
       consumes:
       - application/json
       produces:
       - application/json
-      parameters:
+      parameters: 
       - name: productId
         in: path
         required: true
         type: string
-      responses:
+      responses: 
         '200':
           description: 200 response
-  "/products":
-    get:
+  "/products": 
+    get: 
       summary: getAllProducts
       description: ''
       operationId: getAllProducts.get.products
-      consumes:
-      - application/json
-      produces:
-      - application/json
+      consumes: [application/json]
+      produces: [application/json]
       parameters: []
-      responses:
-        '200':
+      responses: 
+        200: 
+          description: 200 response
+    post: 
+      summary: createProduct
+      description: ''
+      operationId: createProduct.post.products
+      consumes: [application/json]
+      produces: [application/json]
+      parameters: []
+      responses: 
+        200: 
+          description: 200 response
+  "/products/mock": 
+    get: 
+      summary: mockProducts
+      description: ''
+      operationId: mockProducts.get.products/mock
+      consumes: [application/json]
+      produces: [application/json]
+      parameters: []
+      responses: 
+        200: 
           description: 200 response
 definitions:
   ProductInterface:
@@ -48,18 +68,13 @@ definitions:
       price:
         title: ProductInterface.price
         type: number
-      logo:
-        title: ProductInterface.logo
-        type: string
       count:
         title: ProductInterface.count
         type: number
     required:
-    - id
     - title
     - description
     - price
-    - logo
     - count
     additionalProperties: false
     title: ProductInterface
