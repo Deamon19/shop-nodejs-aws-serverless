@@ -24,7 +24,6 @@ provider:
 plugins:
   - serverless-webpack
   - serverless-offline
-  - serverless-auto-swagger
 
 custom:
   webpack:
@@ -45,6 +44,8 @@ functions:
             parameters:
               querystrings:
                 name: true
+          authorizer: arn:aws:lambda:${aws:region}:${aws:accountId}:function:authorization-service-dev-basicAuthorizer
+
   importFileParser:
     handler: handler.importFileParser
     events:
