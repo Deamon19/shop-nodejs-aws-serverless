@@ -1,0 +1,102 @@
+service: product-service
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: ${opt:stage, 'dev'}
+  region: eu-west-3
+  iam:
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Scan
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-products-${sls:stage}
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-stocks-${sls:stage}
+  environment:
+    DYNAMODB_PRODUCTS_TABLE: ${self:service}-products-${sls:stage}
+    DYNAMODB_STOCKS_TABLE: ${self:service}-stocks-${sls:stage}
+
+plugins:
+  - serverless-webpack
+  - serverless-offline
+
+custom:
+  webpack:
+    webpackConfig: 'webpack.config.js'
+    includeModules: true
+    dotenvVars: ${file(configs.js)}
+  autoswagger:
+    typefiles: ['./src/services/productDTO.ts']
+
+functions:
+  getProductById:
+    handler: src/index.getProductByIdHandler
+    events:
+      - http:
+          path: products/{productId}
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                productId: true
+  getAllProducts:
+    handler: src/index.getAllProductsHandler
+    events:
+      - http:
+          path: products
+          method: get
+          cors: true
+  mockProducts:
+    handler: src/index.mockProductsHandler
+    events:
+      - http:
+          path: products/mock
+          method: get
+          cors: true
+  createProduct:
+    handler: src/index.createProductHandler
+    events:
+      - http:
+          path: products
+          method: post
+          cors: true
+          request:
+            schema:
+              application/json: ${file(src/schemas/createProductSchema.json)}
+resources:
+  Resources:
+    Products:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-products-${sls:stage}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+    Stocks:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-stocks-${sls:stage}
+        AttributeDefinitions:
+          - AttributeName: product_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: product_id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5

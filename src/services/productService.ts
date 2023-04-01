@@ -111,5 +111,6 @@ export const mockProducts = async () => {
       })
     );
   }
-  return productsMock.map((product => createProduct(product)))
+  const res = await Promise.all(productsMock.map((async product => await createProduct(product))))
+  return res
 }
